@@ -117,7 +117,7 @@ public class HandleResponse {
                 String sunset = weatherinfo.getString("sunset");
                 SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
                 editor.putString("city", city);
-                editor.putString("day", date);
+                editor.putString("date", date);
                 editor.putString("time", time);
                 editor.putString("weather", weather);
                 editor.putString("l_tmp", l_tmp);
