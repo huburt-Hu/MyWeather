@@ -17,10 +17,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.app.myweather.R;
+import com.example.app.myweather.service.AutoUpdateService;
+import com.example.app.myweather.ui.PullToRefreshView;
 import com.example.app.myweather.util.CallBackListener;
 import com.example.app.myweather.util.HandleResponse;
 import com.example.app.myweather.util.HttpUtil;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Calendar;
 
 public class MainActivity extends Activity {
@@ -37,25 +45,30 @@ public class MainActivity extends Activity {
     private TextView ws;
     private LinearLayout linear;
     private ImageView imageView;
+    private String weathercode;
+    private PullToRefreshView pullToRefreshView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
-        RelativeLayout reLt = (RelativeLayout)findViewById(R.id.relt);
-        setOnclickShake(reLt,5);
+        RelativeLayout reLt = (RelativeLayout) findViewById(R.id.relt);
+//        调用点击抖动的方法
+        setOnclickShake(reLt, 5);
+        pullToRefreshView = (PullToRefreshView) findViewById(R.id.pullToRefresh);
+
         linear = (LinearLayout) findViewById(R.id.linear);
         time = (TextView) findViewById(R.id.time);
-        setOnclickShake(time,2);
+        setOnclickShake(time, 2);
         date = (TextView) findViewById(R.id.day);
-        setOnclickShake(date,4);
+        setOnclickShake(date, 4);
         city = (TextView) findViewById(R.id.city);
-        setOnclickShake(city,1);
+        setOnclickShake(city, 1);
         temp1 = (TextView) findViewById(R.id.l_temp);
         temp2 = (TextView) findViewById(R.id.h_temp);
         weather = (TextView) findViewById(R.id.weather);
-        setOnclickShake(weather,3);
+        setOnclickShake(weather, 3);
         sunrise = (TextView) findViewById(R.id.sunrise);
         sunset = (TextView) findViewById(R.id.sunset);
         wd = (TextView) findViewById(R.id.WD);
@@ -71,40 +84,94 @@ public class MainActivity extends Activity {
             }
         });
         linear.setVisibility(View.INVISIBLE);
-        super.onStart();
         String countyCode = getIntent().getStringExtra("countyCode");
         if (countyCode != null) {
             queryweather(countyCode);
         } else {
             showWeather();
         }
+        //    实现下拉刷新
+        pullToRefreshView.setOnRefreshListener(new PullToRefreshView.PullToRefreshListener() {
+            @Override
+            public void onRefresh() {
+                InputStream inputStream = null;
+                BufferedReader bufferedReader = null;
+                HttpURLConnection connection = null;
+                try {
+                    URL url = new URL("http://apis.baidu.com/apistore/weatherservice/cityid?cityid=" + weathercode);
+                    connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(8000);
+                    connection.setReadTimeout(8000);
+                    connection.setRequestProperty("apikey", "5bba9f3e9999b5122f5d1b8fac9dc013");
+                    inputStream = connection.getInputStream();
+                    bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "utf-8"));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = bufferedReader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    handleResponse.handleWeatherResponse(MainActivity.this, response.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (bufferedReader != null) {
+                        bufferedReader.close();
+                    }
+                    if (inputStream != null) {
+                        inputStream.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showWeather();
+                    }
+                });
+//                完成刷新任务调用此方法
+                pullToRefreshView.finishRefreshing();
+            }
+        }, 0);
+        Intent i = new Intent(this, AutoUpdateService.class);
+        startService(i);
     }
-    public void setOnclickShake(final View view, final int type){
+
+    /*
+    * 点击抖动对应的方法
+    */
+    public void setOnclickShake(final View view, final int type) {
         view.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 view.startAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.shake));
                 switch (type) {
                     case 1:
-                        Toast.makeText(MainActivity.this,"讨厌！o(>﹏<)o干嘛点人家~",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "讨厌！o(>﹏<)o干嘛点人家~", Toast.LENGTH_SHORT).show();
                         break;
                     case 2:
-                        Toast.makeText(MainActivity.this,"别点我~(╯﹏╰）",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "别点我~(╯﹏╰）", Toast.LENGTH_SHORT).show();
                         break;
                     case 3:
-                        Toast.makeText(MainActivity.this,"拿开你的手指(╰_╯)#",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "拿开你的手指(╰_╯)#", Toast.LENGTH_SHORT).show();
                         break;
                     case 4:
-                        Toast.makeText(MainActivity.this,"不要停！~(≧▽≦)/~",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "不要停！~(≧▽≦)/~", Toast.LENGTH_SHORT).show();
                         break;
                     case 5:
-                        Toast.makeText(MainActivity.this,"一库！o(>﹏<)o",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "一库！o(>﹏<)o", Toast.LENGTH_SHORT).show();
                         break;
                 }
             }
         });
     }
 
+    /*根据天气代码查询天气*/
     public void getWeather(String weatherCode) {
         HttpUtil.sendWeatherRequest(weatherCode, new CallBackListener() {
             @Override
@@ -132,16 +199,21 @@ public class MainActivity extends Activity {
         });
     }
 
+    /*
+    * 查询县代码对应的天气代码
+    * */
     public void queryweather(String countyCode) {
         String address = "http://www.weather.com.cn/data/list3/city" + countyCode + ".xml";
         HttpUtil.sendLocationRequest(address, new CallBackListener() {
             @Override
             public void onFinish(String res) {
                 String[] a = res.split("\\|");
-                String weathercode;
                 if (a.length == 2) {
                     weathercode = a[1];
                     getWeather(weathercode);
+                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit();
+                    editor.putString("weather_code", weathercode);
+                    editor.apply();
                 }
             }
 
@@ -159,6 +231,7 @@ public class MainActivity extends Activity {
         });
     }
 
+    /*在Activity中显示天气的方法*/
     public void showWeather() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         time.setText(preferences.getString("time", ""));
@@ -176,6 +249,7 @@ public class MainActivity extends Activity {
         linear.setVisibility(View.VISIBLE);
     }
 
+    /*根据天气情况显示对应图片的方法*/
     public void setImageView(String w) {
         switch (w) {
             case "晴":

@@ -3,6 +3,8 @@
     package="com.example.app.myweather">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FLASHLIGHT"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
         android:allowBackup="true"
@@ -21,6 +23,8 @@
             android:name=".activities.Location"
             android:label="@string/location" />
         <activity android:name=".activities.Test"></activity>
+        <service android:name=".service.AutoUpdateService"/>
+        <receiver android:name=".receiver.AutoUpdateReceiver"/>
     </application>
 
 </manifest>

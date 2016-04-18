@@ -4,11 +4,13 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SearchView;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.app.myweather.R;
@@ -26,6 +28,7 @@ import java.util.List;
 public class Location extends AppCompatActivity {
     HandleResponse handleResponse = HandleResponse.getInstance();
     MyWeatherDB myWeatherDB;
+    private TextView tv;
     private ListView listView;
     private List<Province> provinceList;
     private List<City> cityList;
@@ -45,8 +48,9 @@ public class Location extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location);
+        tv=(TextView)findViewById(R.id.tv11);
+        tv.setText("请选择所在省");
         listView = (ListView) findViewById(R.id.listView);
-        listView.setTextFilterEnabled(true);
         myWeatherDB = MyWeatherDB.getInstance(this);
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list);
         listView.setAdapter(adapter);
@@ -54,9 +58,11 @@ public class Location extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
+                    tv.setText("请选择所在市");
                     selectProvince = provinceList.get(position);
                     queryCity();
                 } else if (currentLevel == LEVEL_CITY) {
+                    tv.setText("请选择所在县");
                     selectCity = cityList.get(position);
                     queryCounty();
                 }else if (currentLevel ==LEVEL_COUNTY){
